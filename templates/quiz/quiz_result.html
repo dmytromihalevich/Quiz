@@ -1,0 +1,14 @@
+{% extends 'quiz/base.html' %}
+{% load static %}
+
+{% block title %}Результати вікторини{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="card shadow-sm p-4 text-center" style="width: 100%; max-width: 400px;">
+        <h3 class="card-title mb-3">Результати</h3>
+        <p class="fs-4">Ваш рахунок: <strong>{{ score }}/{{ total }}</strong></p>
+        <a href="{% url 'quiz:home' %}" class="btn btn-success mt-3 w-100">Повернутися на головну</a>
+    </div>
+</div>
+{% endblock %}

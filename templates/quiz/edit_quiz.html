@@ -1,0 +1,25 @@
+{% extends 'quiz/base.html' %}
+{% block title %}Редагувати вікторину{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="mb-4 text-center">Редагування: {{ form.instance.title }}</h3>
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    {{ formset.management_form }}
+                    {% for form in formset %}
+                        <div class="border p-3 mb-3 rounded">
+                            {{ form.as_p }}
+                        </div>
+                    {% endfor %}
+                    <button class="btn btn-success w-100 mt-3">Зберегти зміни</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

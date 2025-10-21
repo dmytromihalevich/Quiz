@@ -1,11 +1,14 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from .models import Quiz, Question, Answer, QuizSession, QuizMember, QuizResults
 from .forms import JoinQuizForm, QuizForm, QuestionFormSet
-from django.contrib.auth.decorators import login_required
+
 
 def home(request):
     quizzes = Quiz.objects.all().order_by('-created_at')
     return render(request, 'quiz/home.html', {'quizzes': quizzes})
+
 
 @login_required
 def create_quiz(request):
@@ -15,7 +18,7 @@ def create_quiz(request):
             quiz = form.save(commit=False)
             quiz.created_by = request.user
             quiz.save()
-            return redirect('edit_quiz', quiz_id=quiz.id)
+            return redirect('quiz:edit_quiz', quiz_id=quiz.id)
     else:
         form = QuizForm()
     return render(request, 'quiz/create_quiz.html', {'form': form})
@@ -29,7 +32,7 @@ def edit_quiz(request, quiz_id):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
-            return redirect('home')
+            return redirect('quiz:home')
     else:
         form = QuizForm(instance=quiz)
         formset = QuestionFormSet(instance=quiz)
@@ -39,30 +42,36 @@ def edit_quiz(request, quiz_id):
 def create_quiz_session(request, quiz_id):
     quiz = get_object_or_404(Quiz, id=quiz_id)
     session = QuizSession.objects.create(quiz=quiz, host=request.user)
-    return redirect('quiz_session_detail', session_id=session.id)
+    return redirect('quiz:quiz_session_detail', session_id=session.id)
 
-def join_quiz(request):
+
+def join_quiz(request, quiz_id=None):
     if request.method == "POST":
-        form = JoinQuizForm(request.POST)
-        if form.is_valid():
-            code = form.cleaned_data['code']
-            nickname = form.cleaned_data['nickname']
-            try:
-                session = QuizSession.objects.get(code=code, finished=False)
-            except QuizSession.DoesNotExist:
-                form.add_error('code', 'Невірний код або сесія завершена.')
+        if request.user.is_authenticated:
+            nickname = request.user.username
+        else:
+            form = JoinQuizForm(request.POST)
+            if form.is_valid():
+                nickname = form.cleaned_data['nickname']
+            else:
                 return render(request, 'quiz/join_quiz.html', {'form': form})
 
-            member = QuizMember.objects.create(
-                quiz_session=session,
-                nickname=nickname
-            )
-            return redirect('play_quiz', member_id=member.id)
+        if quiz_id:
+            session = get_object_or_404(QuizSession, quiz_id=quiz_id, finished=False)
+        else:
+            code = request.POST.get('code')
+            session = get_object_or_404(QuizSession, code=code, finished=False)
+
+        member = QuizMember.objects.create(
+            quiz_session=session,
+            nickname=nickname
+        )
+        return redirect('quiz:play_quiz', member_id=member.id)
     else:
         form = JoinQuizForm()
     return render(request, 'quiz/join_quiz.html', {'form': form})
 
-@login_required
+
 def play_quiz(request, member_id):
     member = get_object_or_404(QuizMember, id=member_id)
     session = member.quiz_session
@@ -73,7 +82,7 @@ def play_quiz(request, member_id):
         request.session['score'] = 0
 
     current_index = request.session['current_index']
-    
+
     if current_index >= len(questions):
         score = request.session.pop('score')
         request.session.pop('current_index')
@@ -93,7 +102,12 @@ def play_quiz(request, member_id):
                 answer=answer
             )
         request.session['current_index'] += 1
-        return redirect('play_quiz', member_id=member.id)
+        return redirect('quiz:play_quiz', member_id=member.id)
 
     return render(request, 'quiz/play_quiz.html', {'question': question, 'member': member})
 
+
+@login_required
+def logout_view(request):
+    logout(request)
+    return redirect('quiz:home')
