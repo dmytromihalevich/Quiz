@@ -1,0 +1,21 @@
+{% extends 'quiz/base.html' %}
+{% block title %}Реєстрація{% endblock %}
+
+{% block content %}
+<h2>Реєстрація</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+        <div class="mb-3">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Зареєструватися</button>
+</form>
+<p class="mt-3">Вже є акаунт? <a href="{% url 'quiz:login' %}">Увійти</a></p>
+{% endblock %}
+
+

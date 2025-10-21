@@ -1,8 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib import messages
 from .models import Quiz, Question, Answer, QuizSession, QuizMember, QuizResults
-from .forms import JoinQuizForm, QuizForm, QuestionFormSet
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet
+
 
 
 def home(request):
@@ -76,7 +81,7 @@ def play_quiz(request, member_id):
     member = get_object_or_404(QuizMember, id=member_id)
     session = member.quiz_session
     questions = list(session.quiz.questions.all())
-    
+
     if 'current_index' not in request.session:
         request.session['current_index'] = 0
         request.session['score'] = 0
@@ -106,6 +111,31 @@ def play_quiz(request, member_id):
 
     return render(request, 'quiz/play_quiz.html', {'question': question, 'member': member})
 
+
+def register_view(request):
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save() 
+            login(request, user)  
+            return redirect('quiz:home')
+    else:
+        form = RegisterForm()
+    return render(request, 'quiz/register.html', {'form': form})
+
+
+def login_view(request):
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('quiz:home')
+        else:
+            messages.error(request, "Невірний логін або пароль")
+    else:
+        form = AuthenticationForm()
+    return render(request, 'quiz/login.html', {'form': form})
 
 @login_required
 def logout_view(request):

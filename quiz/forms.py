@@ -1,6 +1,13 @@
 from django import forms
 from .models import Quiz, Question, Answer
 from django.forms import inlineformset_factory
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+
+
+
 
 class JoinQuizForm(forms.Form):
     nickname = forms.CharField(
@@ -17,10 +24,12 @@ class QuizForm(forms.ModelForm):
     class Meta:
         model = Quiz
         fields = ['title', 'description']
-        widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Назва вікторини'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Опис вікторини', 'rows': 3}),
-        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+
 
 QuestionFormSet = inlineformset_factory(
     Quiz,
@@ -35,5 +44,15 @@ QuestionFormSet = inlineformset_factory(
         'time_limit': forms.NumberInput(attrs={'class': 'form-control', 'min': 5, 'placeholder': 'Час на відповідь'}),
     }
 )
+
+class RegisterForm(UserCreationForm):
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'  # Bootstrap styling
 
 

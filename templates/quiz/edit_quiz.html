@@ -2,24 +2,32 @@
 {% block title %}Редагувати вікторину{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="mb-4 text-center">Редагування: {{ form.instance.title }}</h3>
-                <form method="POST" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    {{ formset.management_form }}
-                    {% for form in formset %}
-                        <div class="border p-3 mb-3 rounded">
-                            {{ form.as_p }}
-                        </div>
-                    {% endfor %}
-                    <button class="btn btn-success w-100 mt-3">Зберегти зміни</button>
-                </form>
-            </div>
+<h2>Редагувати вікторину</h2>
+<form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+        <div class="mb-3">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
         </div>
-    </div>
-</div>
+    {% endfor %}
+
+    <h4>Питання</h4>
+    {{ formset.management_form }}
+    {% for form in formset %}
+        <div class="border p-3 mb-2">
+            {% for field in form %}
+                <div class="mb-2">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-success">Зберегти зміни</button>
+</form>
 {% endblock %}
+
