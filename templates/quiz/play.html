@@ -6,7 +6,6 @@
 <h1>Playing Quiz: {{ quiz.title }}</h1>
 <p>{{ quiz.description }}</p>
 
-<!-- Тут можна додати форму для відповідей -->
 <form method="post">
     {% csrf_token %}
     {% for question in quiz.questions.all %}

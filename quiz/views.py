@@ -4,16 +4,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from .models import Quiz, Question, Answer, QuizSession, QuizMember, QuizResults
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
 from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet
-
-
 
 def home(request):
     quizzes = Quiz.objects.all().order_by('-created_at')
     return render(request, 'quiz/home.html', {'quizzes': quizzes})
-
 
 @login_required
 def create_quiz(request):
@@ -49,8 +44,23 @@ def create_quiz_session(request, quiz_id):
     session = QuizSession.objects.create(quiz=quiz, host=request.user)
     return redirect('quiz:quiz_session_detail', session_id=session.id)
 
-
 def join_quiz(request, quiz_id=None):
+    """
+    Join an active quiz session.
+    Logged-in users can create a new session if none exists.
+    Anonymous users can only join existing sessions.
+    """
+    quiz = get_object_or_404(Quiz, id=quiz_id)
+
+    try:
+        session = QuizSession.objects.get(quiz=quiz, finished=False)
+    except QuizSession.DoesNotExist:
+        if request.user.is_authenticated:
+            session = QuizSession.objects.create(quiz=quiz, host=request.user)
+        else:
+            messages.error(request, "Only logged-in users can create a new quiz session.")
+            return redirect('quiz:home')
+
     if request.method == "POST":
         if request.user.is_authenticated:
             nickname = request.user.username
@@ -59,23 +69,23 @@ def join_quiz(request, quiz_id=None):
             if form.is_valid():
                 nickname = form.cleaned_data['nickname']
             else:
-                return render(request, 'quiz/join_quiz.html', {'form': form})
-
-        if quiz_id:
-            session = get_object_or_404(QuizSession, quiz_id=quiz_id, finished=False)
-        else:
-            code = request.POST.get('code')
-            session = get_object_or_404(QuizSession, code=code, finished=False)
+                return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
         member = QuizMember.objects.create(
             quiz_session=session,
             nickname=nickname
         )
         return redirect('quiz:play_quiz', member_id=member.id)
+
+    if request.user.is_authenticated:
+        member = QuizMember.objects.create(
+            quiz_session=session,
+            nickname=request.user.username
+        )
+        return redirect('quiz:play_quiz', member_id=member.id)
     else:
         form = JoinQuizForm()
-    return render(request, 'quiz/join_quiz.html', {'form': form})
-
+        return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
 def play_quiz(request, member_id):
     member = get_object_or_404(QuizMember, id=member_id)
@@ -111,7 +121,6 @@ def play_quiz(request, member_id):
 
     return render(request, 'quiz/play_quiz.html', {'question': question, 'member': member})
 
-
 def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
@@ -122,7 +131,6 @@ def register_view(request):
     else:
         form = RegisterForm()
     return render(request, 'quiz/register.html', {'form': form})
-
 
 def login_view(request):
     if request.method == "POST":
