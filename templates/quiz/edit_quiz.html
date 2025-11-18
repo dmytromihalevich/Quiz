@@ -8,7 +8,7 @@
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
 
-        <!-- Quiz main fields -->
+        
         {% for field in form %}
             <div class="mb-3">
                 {{ field.label_tag }}
@@ -71,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionPrefix = totalQuestionForms.name.replace(/-TOTAL_FORMS$/, '');
     const questionTemplate = questionContainer.querySelector('.question-block');
 
-    // Add new question
     addQuestionBtn.addEventListener('click', function() {
         let questionIndex = parseInt(totalQuestionForms.value);
         const newQuestion = questionTemplate.cloneNode(true);
@@ -99,7 +98,6 @@ document.addEventListener('DOMContentLoaded', function() {
         totalQuestionForms.value = questionIndex + 1;
     });
 
-    // Add new answer
     questionContainer.addEventListener('click', function(e) {
         if (!e.target.classList.contains('add-answer-btn')) return;
 
