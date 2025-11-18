@@ -2,43 +2,40 @@
 {% block title %}Редагувати вікторину{% endblock %}
 
 {% block content %}
-
 <div class="container mt-4">
     <h2 class="mb-4">Редагувати вікторину</h2>
 
-```
-<form method="post" enctype="multipart/form-data" novalidate>
-    {% csrf_token %}
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
 
+        <!-- Quiz main fields -->
+        {% for field in form %}
+            <div class="mb-3">
+                {{ field.label_tag }}
+                {{ field }}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
 
-    {% for field in form %}
-        <div class="mb-3">
-            {{ field.label_tag }}
-            {{ field }}
-            {{ field.errors }}
-        </div>
-    {% endfor %}
+        <h4 class="mt-4 mb-3">Питання</h4>
+        {{ formset.management_form }}
 
-    <h4 class="mt-4 mb-3">Питання</h4>
-    {{ formset.management_form }}
+        <div id="questions-container">
+            {% for q_form in formset %}
+                <div class="question-block border rounded p-3 mb-3 bg-light">
+                    <h5 class="mb-3">Питання {{ forloop.counter }}</h5>
 
-    <div id="questions-container">
-        {% for q_form in formset %}
-            <div class="question-block border rounded p-3 mb-3 bg-light">
-                <h5 class="mb-3">Питання {{ forloop.counter }}</h5>
+                    {% for field in q_form %}
+                        <div class="mb-2">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                    {% endfor %}
 
-                {% for field in q_form %}
-                    <div class="mb-2">
-                        {{ field.label_tag }}
-                        {{ field }}
-                        {{ field.errors }}
-                    </div>
-                {% endfor %}
-
-
-                <div class="answers-container" data-question-index="{{ forloop.counter0 }}">
-                    {% if q_form.answers %}
-                        {{ q_form.answers.management_form }}
+                    <div class="answers-container"
+                         data-question-index="{{ forloop.counter0 }}"
+                         data-empty-form="{{ q_form.answers.empty_form|escapejs }}">
                         {% for a_form in q_form.answers %}
                             <div class="answer-block mb-2 p-2 border rounded bg-white">
                                 {% for field in a_form %}
@@ -50,20 +47,20 @@
                                 {% endfor %}
                             </div>
                         {% endfor %}
-                    {% endif %}
+                    </div>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary mt-2 add-answer-btn"
+                            data-question-index="{{ forloop.counter0 }}">Додати відповідь</button>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-answer-btn" data-question-index="{{ forloop.counter0 }}">Додати відповідь</button>
-            </div>
-        {% endfor %}
-    </div>
+            {% endfor %}
+        </div>
 
-    <div class="d-flex gap-2 mt-3">
-        <button type="button" id="add-question" class="btn btn-outline-primary">Додати питання</button>
-        <button type="submit" class="btn btn-success">Зберегти зміни</button>
-    </div>
-</form>
-```
-
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" id="add-question" class="btn btn-outline-primary">Додати питання</button>
+            <button type="submit" class="btn btn-success">Зберегти зміни</button>
+        </div>
+    </form>
 </div>
 
 <script>
@@ -74,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionPrefix = totalQuestionForms.name.replace(/-TOTAL_FORMS$/, '');
     const questionTemplate = questionContainer.querySelector('.question-block');
 
+    // Add new question
     addQuestionBtn.addEventListener('click', function() {
         let questionIndex = parseInt(totalQuestionForms.value);
         const newQuestion = questionTemplate.cloneNode(true);
@@ -101,6 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
         totalQuestionForms.value = questionIndex + 1;
     });
 
+    // Add new answer
     questionContainer.addEventListener('click', function(e) {
         if (!e.target.classList.contains('add-answer-btn')) return;
 

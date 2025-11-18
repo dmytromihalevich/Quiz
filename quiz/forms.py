@@ -53,6 +53,17 @@ class RegisterForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs['class'] = 'form-control'  # Bootstrap styling
+            field.widget.attrs['class'] = 'form-control'
 
 
+AnswerFormSet = inlineformset_factory(
+    Question,
+    Answer,
+    fields=['text', 'is_correct'],
+    extra=1,
+    can_delete=True,
+    widgets={
+        'text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Текст відповіді'}),
+        'is_correct': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    }
+)

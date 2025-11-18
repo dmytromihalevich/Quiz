@@ -5,6 +5,9 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from .models import Quiz, Question, Answer, QuizSession, QuizMember, QuizResults
 from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet
+from django.forms import inlineformset_factory
+from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet, AnswerFormSet
+
 
 def home(request):
     quizzes = Quiz.objects.all().order_by('-created_at')
@@ -45,11 +48,7 @@ def create_quiz_session(request, quiz_id):
     return redirect('quiz:quiz_session_detail', session_id=session.id)
 
 def join_quiz(request, quiz_id=None):
-    """
-    Join an active quiz session.
-    Logged-in users can create a new session if none exists.
-    Anonymous users can only join existing sessions.
-    """
+
     quiz = get_object_or_404(Quiz, id=quiz_id)
 
     try:
