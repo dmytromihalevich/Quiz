@@ -31,4 +31,4 @@ EXPOSE 8000
 # Замініть 'myproject' на назву вашої папки з settings.py
 CMD python manage.py migrate && \
     python create_superuser.py && \
-    gunicorn group_portal.wsgi:application --bind 0.0.0.0:8000
+    gunicorn quiz_project.wsgi:application --bind 0.0.0.0:8000

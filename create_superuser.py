@@ -2,7 +2,7 @@ import os
 import django
 from django.contrib.auth import get_user_model
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "group_portal.settings") # Замініть myproject на назву вашої папки!
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "quiz_project.settings") # Замініть myproject на назву вашої папки!
 django.setup()
 
 User = get_user_model()
