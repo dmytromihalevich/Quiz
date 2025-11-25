@@ -4,14 +4,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from .models import Quiz, Question, Answer, QuizSession, QuizMember, QuizResults
-from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet
-from django.forms import inlineformset_factory
 from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet, AnswerFormSet
 
 
 def home(request):
     quizzes = Quiz.objects.all().order_by('-created_at')
     return render(request, 'quiz/home.html', {'quizzes': quizzes})
+
 
 @login_required
 def create_quiz(request):
@@ -26,20 +25,70 @@ def create_quiz(request):
         form = QuizForm()
     return render(request, 'quiz/create_quiz.html', {'form': form})
 
+
 @login_required
 def edit_quiz(request, quiz_id):
+    """
+    Edit quiz with nested Question (formset) and per-question Answer formsets.
+    QuestionFormSet should be an inlineformset_factory(Quiz, Question, ...) (prefix 'questions' used).
+    AnswerFormSet should be an inlineformset_factory(Question, Answer, ...) (we'll use prefixes 'answers-0', 'answers-1', ...)
+    """
     quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
+
+    # use explicit prefix for question formset so template + JS can target it
+    QUESTION_PREFIX = 'questions'
+
     if request.method == 'POST':
         form = QuizForm(request.POST, instance=quiz)
-        formset = QuestionFormSet(request.POST, request.FILES, instance=quiz)
-        if form.is_valid() and formset.is_valid():
+        q_formset = QuestionFormSet(request.POST, request.FILES, instance=quiz, prefix=QUESTION_PREFIX)
+
+        # Build answer formsets (bound) for validation/rendering — prefix per question index
+        answer_formsets = []
+        for idx, q_form in enumerate(q_formset.forms):
+            prefix = f'answers-{idx}'
+            # bind answers to the question instance (may not yet be saved)
+            a_fs = AnswerFormSet(request.POST, request.FILES, instance=q_form.instance, prefix=prefix)
+            answer_formsets.append(a_fs)
+
+        # attach answer formsets to question forms so template can render errors and management_form
+        for qf, afs in zip(q_formset.forms, answer_formsets):
+            qf.answers = afs
+
+        # validate all
+        all_answers_valid = all(a.is_valid() for a in answer_formsets)
+        if form.is_valid() and q_formset.is_valid() and all_answers_valid:
+            # save quiz and questions
             form.save()
-            formset.save()
+            q_formset.save()
+
+            # After questions saved, re-bind answer formsets to the saved question instances and save them
+            for idx, qf in enumerate(q_formset.forms):
+                question_instance = qf.instance  # should now have pk
+                prefix = f'answers-{idx}'
+                a_fs = AnswerFormSet(request.POST, request.FILES, instance=question_instance, prefix=prefix)
+                if a_fs.is_valid():
+                    a_fs.save()
+
             return redirect('quiz:home')
+        # if invalid -> fall through to render with error messages (q_formset forms already contain errors)
+
     else:
         form = QuizForm(instance=quiz)
-        formset = QuestionFormSet(instance=quiz)
-    return render(request, 'quiz/edit_quiz.html', {'form': form, 'formset': formset})
+        q_formset = QuestionFormSet(instance=quiz, prefix=QUESTION_PREFIX)
+        # create answer formsets for existing question forms
+        answer_formsets = []
+        for idx, q_form in enumerate(q_formset.forms):
+            prefix = f'answers-{idx}'
+            a_fs = AnswerFormSet(instance=q_form.instance, prefix=prefix)
+            answer_formsets.append(a_fs)
+            # attach for template
+            q_form.answers = a_fs
+
+    return render(request, 'quiz/edit_quiz.html', {
+        'form': form,
+        'formset': q_formset,
+    })
+
 
 @login_required
 def create_quiz_session(request, quiz_id):
@@ -47,8 +96,8 @@ def create_quiz_session(request, quiz_id):
     session = QuizSession.objects.create(quiz=quiz, host=request.user)
     return redirect('quiz:quiz_session_detail', session_id=session.id)
 
-def join_quiz(request, quiz_id=None):
 
+def join_quiz(request, quiz_id=None):
     quiz = get_object_or_404(Quiz, id=quiz_id)
 
     try:
@@ -86,6 +135,7 @@ def join_quiz(request, quiz_id=None):
         form = JoinQuizForm()
         return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
+
 def play_quiz(request, member_id):
     member = get_object_or_404(QuizMember, id=member_id)
     session = member.quiz_session
@@ -120,16 +170,18 @@ def play_quiz(request, member_id):
 
     return render(request, 'quiz/play_quiz.html', {'question': question, 'member': member})
 
+
 def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save() 
-            login(request, user)  
+            user = form.save()
+            login(request, user)
             return redirect('quiz:home')
     else:
         form = RegisterForm()
     return render(request, 'quiz/register.html', {'form': form})
+
 
 def login_view(request):
     if request.method == "POST":
@@ -143,6 +195,7 @@ def login_view(request):
     else:
         form = AuthenticationForm()
     return render(request, 'quiz/login.html', {'form': form})
+
 
 @login_required
 def logout_view(request):

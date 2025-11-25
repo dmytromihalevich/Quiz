@@ -8,7 +8,6 @@
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
 
-        <!-- Quiz main fields -->
         {% for field in form %}
             <div class="mb-3">
                 {{ field.label_tag }}
@@ -22,7 +21,7 @@
 
         <div id="questions-container">
             {% for q_form in formset %}
-                <div class="question-block border rounded p-3 mb-3 bg-light">
+                <div class="question-block border rounded p-3 mb-3 bg-light" data-q-index="{{ forloop.counter0 }}">
                     <h5 class="mb-3">Питання {{ forloop.counter }}</h5>
 
                     {% for field in q_form %}
@@ -33,10 +32,14 @@
                         </div>
                     {% endfor %}
 
+                    <h6>Відповіді</h6>
+
                     <div class="answers-container"
                          data-question-index="{{ forloop.counter0 }}"
                          data-empty-form="{{ q_form.answers.empty_form|escapejs }}">
-                        {% for a_form in q_form.answers %}
+                        {{ q_form.answers.management_form }}
+
+                        {% for a_form in q_form.answers.forms %}
                             <div class="answer-block mb-2 p-2 border rounded bg-white">
                                 {% for field in a_form %}
                                     <div class="mb-1">
@@ -67,62 +70,97 @@
 document.addEventListener('DOMContentLoaded', function() {
     const questionContainer = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question');
-    const totalQuestionForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-    const questionPrefix = totalQuestionForms.name.replace(/-TOTAL_FORMS$/, '');
+
+
+    const totalQuestionFormsInput = document.querySelector('input[name="questions-TOTAL_FORMS"]');
+    if (!totalQuestionFormsInput) {
+        console.error('questions management form not found (questions-TOTAL_FORMS).');
+        return;
+    }
     const questionTemplate = questionContainer.querySelector('.question-block');
 
-    // Add new question
     addQuestionBtn.addEventListener('click', function() {
-        let questionIndex = parseInt(totalQuestionForms.value);
-        const newQuestion = questionTemplate.cloneNode(true);
+        let qIndex = parseInt(totalQuestionFormsInput.value, 10);
+        const newQ = questionTemplate.cloneNode(true);
 
-        newQuestion.querySelectorAll('input, textarea, select').forEach(input => {
-            if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
-            else input.value = '';
+
+        newQ.querySelectorAll('[name], [id], [for]').forEach(el => {
+
+            if (el.name) {
+                el.name = el.name.replace(/questions-\d+-/g, `questions-${qIndex}-`);
+                el.name = el.name.replace(/answers-\d+-/g, `answers-${qIndex}-`);
+            }
+            if (el.id) {
+                el.id = el.id.replace(/questions-\d+-/g, `questions-${qIndex}-`);
+                el.id = el.id.replace(/answers-\d+-/g, `answers-${qIndex}-`);
+            }
+            if (el.getAttribute('for')) {
+                el.setAttribute('for', el.getAttribute('for').replace(/questions-\d+-/g, `questions-${qIndex}-`).replace(/answers-\d+-/g, `answers-${qIndex}-`));
+            }
         });
 
-        newQuestion.querySelectorAll('[name], [id], [for]').forEach(el => {
-            if (el.name) el.name = el.name.replace(new RegExp(questionPrefix + '-\\d+-'), questionPrefix + '-' + questionIndex + '-');
-            if (el.id) el.id = el.id.replace(new RegExp(questionPrefix + '-\\d+-'), questionPrefix + '-' + questionIndex + '-');
-            if (el.getAttribute('for')) el.setAttribute('for', el.getAttribute('for').replace(new RegExp(questionPrefix + '-\\d+-'), questionPrefix + '-' + questionIndex + '-'));
-        });
 
-        const header = newQuestion.querySelector('h5');
-        if (header) header.textContent = 'Питання ' + (questionIndex + 1);
+        const header = newQ.querySelector('h5');
+        if (header) header.textContent = 'Питання ' + (qIndex + 1);
 
-        const answersContainer = newQuestion.querySelector('.answers-container');
-        if (answersContainer) answersContainer.innerHTML = '';
-        const addAnswerBtn = newQuestion.querySelector('.add-answer-btn');
-        if (addAnswerBtn) addAnswerBtn.dataset.questionIndex = questionIndex;
+        const answersContainer = newQ.querySelector('.answers-container');
+        if (answersContainer) {
 
-        questionContainer.appendChild(newQuestion);
-        totalQuestionForms.value = questionIndex + 1;
+            if (answersContainer.dataset.emptyForm) {
+                answersContainer.dataset.emptyForm = answersContainer.dataset.emptyForm.replace(/answers-\d+-/g, `answers-${qIndex}-`);
+            }
+
+            answersContainer.setAttribute('data-question-index', qIndex);
+
+
+            answersContainer.querySelectorAll('input').forEach(input => {
+                if (input.name && input.name.match(/^answers-\d+-/)) {
+                    input.name = input.name.replace(/answers-\d+-/g, `answers-${qIndex}-`);
+                    if (input.id) input.id = input.id.replace(/answers-\d+-/g, `answers-${qIndex}-`);
+                    if (input.name.endsWith('-TOTAL_FORMS')) input.value = '0';
+                    if (input.name.endsWith('-INITIAL_FORMS')) input.value = '0';
+                }
+            });
+        }
+
+
+        const addAnswerBtn = newQ.querySelector('.add-answer-btn');
+        if (addAnswerBtn) addAnswerBtn.dataset.questionIndex = qIndex;
+
+
+        questionContainer.appendChild(newQ);
+        totalQuestionFormsInput.value = qIndex + 1;
     });
 
-    // Add new answer
     questionContainer.addEventListener('click', function(e) {
         if (!e.target.classList.contains('add-answer-btn')) return;
 
-        const questionIndex = e.target.dataset.questionIndex;
-        const answersContainer = questionContainer.querySelector(`.answers-container[data-question-index="${questionIndex}"]`);
+        const qIndex = e.target.dataset.questionIndex;
+        const answersContainer = questionContainer.querySelector(`.answers-container[data-question-index="${qIndex}"]`);
         if (!answersContainer) return;
 
-        const totalFormsInput = answersContainer.querySelector(`input[name$="-TOTAL_FORMS"]`);
-        if (!totalFormsInput) return;
+        const totalFormsInput = answersContainer.querySelector(`input[name="answers-${qIndex}-TOTAL_FORMS"]`);
+        if (!totalFormsInput) {
+            console.error('Answers management form not found for question', qIndex);
+            return;
+        }
 
-        const answerIndex = parseInt(totalFormsInput.value);
-        const emptyFormTemplate = answersContainer.dataset.emptyForm;
-        if (!emptyFormTemplate) return;
+        const nextIndex = parseInt(totalFormsInput.value, 10);
+        const emptyForm = answersContainer.dataset.emptyForm;
+        if (!emptyForm) {
+            console.error('Empty answer form template not found in data-empty-form for question', qIndex);
+            return;
+        }
 
-        let newAnswerHtml = emptyFormTemplate.replace(/__prefix__/g, answerIndex);
-        const div = document.createElement('div');
-        div.classList.add('answer-block', 'mb-2', 'p-2', 'border', 'rounded', 'bg-white');
-        div.innerHTML = newAnswerHtml;
-        answersContainer.appendChild(div);
+        const newHtml = emptyForm.replace(/__prefix__/g, nextIndex);
 
-        totalFormsInput.value = answerIndex + 1;
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('answer-block', 'mb-2', 'p-2', 'border', 'rounded', 'bg-white');
+        wrapper.innerHTML = newHtml;
+
+        answersContainer.appendChild(wrapper);
+        totalFormsInput.value = nextIndex + 1;
     });
 });
 </script>
-
 {% endblock %}
