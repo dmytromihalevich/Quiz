@@ -5,13 +5,54 @@
 <h2>Приєднатися до вікторини</h2>
 <form method="post">
     {% csrf_token %}
-    {% for field in form %}
-        <div class="mb-3">
-            {{ field.label_tag }}
-            {{ field }}
-            {{ field.errors }}
+    <div class="mb-3">
+        {{ form.role.label_tag }}
+        <div>
+            {% for radio in form.role %}
+                <div class="form-check form-check-inline">
+                    {{ radio.tag }} {{ radio.choice_label }}
+                </div>
+            {% endfor %}
         </div>
-    {% endfor %}
+        {{ form.role.errors }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.code.label_tag }}
+        {{ form.code }}
+        {{ form.code.errors }}
+        <div class="form-text">Гравці повинні ввести код сесії, який вам надає ведучий.</div>
+    </div>
+
+    <div class="mb-3">
+        {{ form.nickname.label_tag }}
+        {{ form.nickname }}
+        {{ form.nickname.errors }}
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleRadios = document.querySelectorAll('input[name="role"]');
+    const codeWrapper = document.querySelector('input[name="code"]').closest('.mb-3');
+    const nickWrapper = document.querySelector('input[name="nickname"]').closest('.mb-3');
+
+    function updateVisibility() {
+        const checked = document.querySelector('input[name="role"]:checked');
+        if (!checked) return;
+        if (checked.value === 'host') {
+            codeWrapper.style.display = 'none';
+            nickWrapper.style.display = 'none';
+        } else {
+            codeWrapper.style.display = '';
+            nickWrapper.style.display = '';
+        }
+    }
+
+    roleRadios.forEach(r => r.addEventListener('change', updateVisibility));
+    updateVisibility();
+});
+</script>
+
     <button type="submit" class="btn btn-primary">Приєднатися</button>
 </form>
 {% endblock %}

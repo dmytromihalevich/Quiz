@@ -13,11 +13,23 @@ class JoinQuizForm(forms.Form):
     nickname = forms.CharField(
         max_length=25,
         label="Нікнейм",
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Введіть ваш нікнейм'})
     )
     code = forms.IntegerField(
         label="Код вікторини",
+        required=False,
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Введіть код вікторини'})
+    )
+    ROLE_CHOICES = [
+        ('player', 'Гравець'),
+        ('host', 'Ведучий'),
+    ]
+    role = forms.ChoiceField(
+        choices=ROLE_CHOICES,
+        initial='player',
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label='Роль'
     )
 
 class QuizForm(forms.ModelForm):

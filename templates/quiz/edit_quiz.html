@@ -35,8 +35,7 @@
                     <h6>Відповіді</h6>
 
                     <div class="answers-container"
-                         data-question-index="{{ forloop.counter0 }}"
-                         data-empty-form="{{ q_form.answers.empty_form|escapejs }}">
+                         data-question-index="{{ forloop.counter0 }}">
                         {{ q_form.answers.management_form }}
 
                         {% for a_form in q_form.answers.forms %}
@@ -50,6 +49,8 @@
                                 {% endfor %}
                             </div>
                         {% endfor %}
+
+                        <template class="empty-answer-template" data-question-index="{{ forloop.counter0 }}">{{ q_form.answers.empty_form|safe }}</template>
                     </div>
 
                     <button type="button"
@@ -105,15 +106,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const answersContainer = newQ.querySelector('.answers-container');
         if (answersContainer) {
+            // Remove any existing answer DOM blocks cloned from the template so new question starts empty
+            answersContainer.querySelectorAll('.answer-block').forEach(el => el.remove());
 
-            if (answersContainer.dataset.emptyForm) {
-                answersContainer.dataset.emptyForm = answersContainer.dataset.emptyForm.replace(/answers-\d+-/g, `answers-${qIndex}-`);
-            }
-
+            // Set data-question-index for later lookup
             answersContainer.setAttribute('data-question-index', qIndex);
 
-
-            answersContainer.querySelectorAll('input').forEach(input => {
+            // Update management form inputs names/prefixes for this answers formset
+            answersContainer.querySelectorAll('input, select, textarea').forEach(input => {
                 if (input.name && input.name.match(/^answers-\d+-/)) {
                     input.name = input.name.replace(/answers-\d+-/g, `answers-${qIndex}-`);
                     if (input.id) input.id = input.id.replace(/answers-\d+-/g, `answers-${qIndex}-`);
@@ -146,12 +146,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const nextIndex = parseInt(totalFormsInput.value, 10);
-        const emptyForm = answersContainer.dataset.emptyForm;
-        if (!emptyForm) {
-            console.error('Empty answer form template not found in data-empty-form for question', qIndex);
+        const templateEl = answersContainer.querySelector('template.empty-answer-template');
+        if (!templateEl) {
+            console.error('Empty answer template not found for question', qIndex);
             return;
         }
 
+        // Inject the question prefix into the empty form HTML, then replace the form index
+        let emptyForm = templateEl.innerHTML;
+        // transform names like 'answers-__prefix__-field' -> 'answers-<qIndex>-__prefix__-field'
+        emptyForm = emptyForm.replace(/answers-__prefix__-/g, `answers-${qIndex}-__prefix__-`);
         const newHtml = emptyForm.replace(/__prefix__/g, nextIndex);
 
         const wrapper = document.createElement('div');
@@ -159,7 +163,22 @@ document.addEventListener('DOMContentLoaded', function() {
         wrapper.innerHTML = newHtml;
 
         answersContainer.appendChild(wrapper);
-        totalFormsInput.value = nextIndex + 1;
+
+        // Ensure inputs are correctly indexed for this question (safety against duplicated names)
+        function renumberAnswers(container, qIdx) {
+            const blocks = Array.from(container.querySelectorAll('.answer-block'));
+            blocks.forEach((blk, i) => {
+                blk.querySelectorAll('[name], [id], [for]').forEach(el => {
+                    if (el.name) el.name = el.name.replace(/answers-\d+-\d+-/g, `answers-${qIdx}-${i}-`);
+                    if (el.id) el.id = el.id.replace(/answers-\d+-\d+-/g, `answers-${qIdx}-${i}-`);
+                    if (el.getAttribute('for')) el.setAttribute('for', el.getAttribute('for').replace(/answers-\d+-\d+-/g, `answers-${qIdx}-${i}-`));
+                });
+            });
+            const total = container.querySelector(`input[name="answers-${qIdx}-TOTAL_FORMS"]`);
+            if (total) total.value = blocks.length;
+        }
+
+        renumberAnswers(answersContainer, qIndex);
     });
 });
 </script>

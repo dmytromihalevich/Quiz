@@ -1,0 +1,52 @@
+{% extends 'quiz/base.html' %}
+{% block title %}Сесія — {{ session.quiz.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Сесія: {{ session.quiz.title }}</h2>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h4>Код для підключення</h4>
+            <p class="display-6">{{ session.code }}</p>
+            <p class="text-muted">Поділіться цим кодом з гравцями щоб вони приєдналися.</p>
+        </div>
+    </div>
+
+    <h5>Учасники</h5>
+    <ul class="list-group mb-3">
+        {% for m in members %}
+            <li class="list-group-item">{{ m.nickname }}</li>
+        {% empty %}
+            <li class="list-group-item text-muted">Немає учасників</li>
+        {% endfor %}
+    </ul>
+
+    {% if is_host %}
+        <div class="mb-3">
+            {% if members|length > 0 %}
+                <a href="{% url 'quiz:play_quiz' member_id=members.0.id %}" class="btn btn-success">Почати вікторину</a>
+            {% else %}
+                <button class="btn btn-secondary" disabled>Почати вікторину (очікування учасників)</button>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <a href="{% url 'quiz:home' %}" class="btn btn-outline-secondary">Повернутися додому</a>
+
+    <script>
+    // copy code button behavior
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copy-session-code');
+        if (!copyBtn) return;
+        copyBtn.addEventListener('click', function() {
+            const code = '{{ session.code }}';
+            navigator.clipboard.writeText(code).then(() => {
+                copyBtn.textContent = 'Скопійовано!';
+                setTimeout(() => copyBtn.textContent = 'Копіювати код', 1500);
+            }).catch(() => alert('Не вдалося скопіювати код'));
+        });
+    });
+    </script>
+</div>
+{% endblock %}

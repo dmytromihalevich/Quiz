@@ -99,41 +99,73 @@ def create_quiz_session(request, quiz_id):
 
 def join_quiz(request, quiz_id=None):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-
-    try:
-        session = QuizSession.objects.get(quiz=quiz, finished=False)
-    except QuizSession.DoesNotExist:
-        if request.user.is_authenticated:
-            session = QuizSession.objects.create(quiz=quiz, host=request.user)
-        else:
-            messages.error(request, "Only logged-in users can create a new quiz session.")
-            return redirect('quiz:home')
+    # New behavior: user can choose role 'host' or 'player'.
+    # - Host: must be authenticated; creates a new QuizSession and becomes a member.
+    # - Player: must provide a session `code` (or will join an existing open session) and a nickname (if anonymous).
 
     if request.method == "POST":
+        form = JoinQuizForm(request.POST)
+        if not form.is_valid():
+            return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
+
+        role = form.cleaned_data.get('role')
+        # Host flow
+        if role == 'host':
+            if not request.user.is_authenticated:
+                messages.error(request, "Ви повинні увійти в систему, щоб створити сесію як ведучий.")
+                return redirect('quiz:login')
+
+            # create a new session (always create a fresh one for this host)
+            session = QuizSession.objects.create(quiz=quiz, host=request.user)
+            member = QuizMember.objects.create(quiz_session=session, nickname=request.user.username)
+            messages.success(request, f"Сесію створено. Код сесії: {session.code}")
+            return redirect('quiz:quiz_session_detail', session_id=session.id)
+
+        # Player flow: validate code and nickname if needed
+        code = form.cleaned_data.get('code')
+        if not code:
+            form.add_error('code', 'Введіть код сесії')
+            return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
+
         if request.user.is_authenticated:
             nickname = request.user.username
         else:
-            form = JoinQuizForm(request.POST)
-            if form.is_valid():
-                nickname = form.cleaned_data['nickname']
-            else:
+            nickname = form.cleaned_data.get('nickname')
+            if not nickname:
+                form.add_error('nickname', 'Введіть нікнейм')
                 return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
-        member = QuizMember.objects.create(
-            quiz_session=session,
-            nickname=nickname
-        )
+        try:
+            session = QuizSession.objects.get(quiz=quiz, code=code, finished=False)
+        except QuizSession.DoesNotExist:
+            form.add_error('code', 'Сесія з таким кодом не знайдена або вже завершена.')
+            return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
+
+        member = QuizMember.objects.create(quiz_session=session, nickname=nickname)
         return redirect('quiz:play_quiz', member_id=member.id)
 
-    if request.user.is_authenticated:
-        member = QuizMember.objects.create(
-            quiz_session=session,
-            nickname=request.user.username
-        )
-        return redirect('quiz:play_quiz', member_id=member.id)
-    else:
-        form = JoinQuizForm()
-        return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
+    # GET
+    form = JoinQuizForm()
+    return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
+
+
+@login_required
+def quiz_session_detail(request, session_id):
+    """Lobby/detail view for a quiz session. Shows session code and current members.
+
+    Only the host (session.host) can access management features here.
+    """
+    session = get_object_or_404(QuizSession, id=session_id)
+
+    # Basic access: allow host and any member of the session to view. Hosts get extra controls.
+    is_host = request.user == session.host
+    members = QuizMember.objects.filter(quiz_session=session)
+
+    return render(request, 'quiz/quiz_session_detail.html', {
+        'session': session,
+        'members': members,
+        'is_host': is_host,
+    })
 
 
 def play_quiz(request, member_id):
