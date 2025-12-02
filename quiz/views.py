@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
+from django.http import JsonResponse
 from .models import Quiz, Question, Answer, QuizSession, QuizMember, QuizResults
 from .forms import RegisterForm, JoinQuizForm, QuizForm, QuestionFormSet, AnswerFormSet
 
@@ -142,14 +143,18 @@ def join_quiz(request, quiz_id=None):
             return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
         member = QuizMember.objects.create(quiz_session=session, nickname=nickname)
-        return redirect('quiz:play_quiz', member_id=member.id)
+        # remember this member id in the user's session so lobby can show an "Enter quiz" button
+        request.session[f'member_{session.id}'] = member.id
+        # If session already started, send player straight to the quiz; otherwise send to lobby
+        if session.started:
+            return redirect('quiz:play_quiz', member_id=member.id)
+        return redirect('quiz:quiz_session_detail', session_id=session.id)
 
     # GET
     form = JoinQuizForm()
     return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
 
-@login_required
 def quiz_session_detail(request, session_id):
     """Lobby/detail view for a quiz session. Shows session code and current members.
 
@@ -161,10 +166,56 @@ def quiz_session_detail(request, session_id):
     is_host = request.user == session.host
     members = QuizMember.objects.filter(quiz_session=session)
 
+    # find this user's member id for this session (if any)
+    member_session_key = f'member_{session.id}'
+    current_member_id = request.session.get(member_session_key)
+
     return render(request, 'quiz/quiz_session_detail.html', {
         'session': session,
         'members': members,
         'is_host': is_host,
+        'current_member_id': current_member_id,
+    })
+
+
+def session_status(request, session_id):
+    """Return JSON with session started status. Used by lobby polling."""
+    session = get_object_or_404(QuizSession, id=session_id)
+    return JsonResponse({'started': bool(session.started)})
+
+
+@login_required
+def start_session(request, session_id):
+    session = get_object_or_404(QuizSession, id=session_id)
+    if request.user != session.host:
+        messages.error(request, 'Тільки ведучий може запускати сесію.')
+        return redirect('quiz:quiz_session_detail', session_id=session.id)
+
+    # mark started
+    session.started = True
+    session.save()
+    messages.success(request, 'Сесію запущено. Гравці можуть почати гру.')
+    return redirect('quiz:quiz_session_detail', session_id=session.id)
+
+
+@login_required
+def quiz_session_results(request, session_id):
+    session = get_object_or_404(QuizSession, id=session_id)
+    if request.user != session.host:
+        messages.error(request, 'Тільки ведучий може переглядати результати.')
+        return redirect('quiz:quiz_session_detail', session_id=session.id)
+
+    members = QuizMember.objects.filter(quiz_session=session)
+    # compute scores per member
+    results = []
+    for m in members:
+        correct_count = QuizResults.objects.filter(quiz_member=m, answer__is_correct=True).count()
+        total = QuizResults.objects.filter(quiz_member=m).count()
+        results.append({'member': m, 'correct': correct_count, 'total': total})
+
+    return render(request, 'quiz/quiz_session_results.html', {
+        'session': session,
+        'results': results,
     })
 
 

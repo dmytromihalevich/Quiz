@@ -39,6 +39,9 @@
                             <a class="nav-link" href="{% url 'quiz:register' %}">Реєстрація</a>
                         </li>
                     {% endif %}
+                    <li class="nav-item d-flex align-items-center ms-2">
+                        <button id="theme-toggle" class="btn btn-sm theme-toggle-btn" title="Toggle theme">🌙</button>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -50,6 +53,31 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    (function(){
+        const toggle = document.getElementById('theme-toggle');
+        const root = document.documentElement;
+        const key = 'quiz_theme';
+
+        function applyTheme(t){
+            if(t === 'dark') root.setAttribute('data-theme','dark');
+            else root.removeAttribute('data-theme');
+            if(toggle) toggle.textContent = t === 'dark' ? '☀️' : '🌙';
+        }
+
+        // init
+        const stored = localStorage.getItem(key) || 'light';
+        applyTheme(stored);
+
+        if(toggle){
+            toggle.addEventListener('click', () => {
+                const now = (localStorage.getItem(key) || 'light') === 'dark' ? 'light' : 'dark';
+                localStorage.setItem(key, now);
+                applyTheme(now);
+            });
+        }
+    })();
+    </script>
 </body>
 </html>
 

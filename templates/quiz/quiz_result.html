@@ -2,7 +2,43 @@
 {% block title %}Результат{% endblock %}
 
 {% block content %}
-<h2>Результат вікторини</h2>
-<p>Ви набрали {{ score }} з {{ total }} правильних відповідей.</p>
-<a href="{% url 'quiz:home' %}" class="btn btn-primary">На головну</a>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-6 mx-auto text-center">
+            <!-- Result card -->
+            <div class="card">
+                <div class="card-body p-4">
+                    <h1 class="h3 mb-4">Результат вікторини</h1>
+
+                    <!-- Score display -->
+                    <div class="mb-4">
+                        <div class="display-1 fw-bold mb-2" style="color: var(--link);">{{ score }}<span style="font-size: 0.5em; color: var(--muted);">/ {{ total }}</span></div>
+                        <p class="h6 text-muted">Правильних відповідей</p>
+
+                        <!-- Score percentage and feedback -->
+                        <div class="progress mb-3" style="height: 12px; border-radius: 10px;">
+                            <div class="progress-bar" role="progressbar" style="width: {% widthratio score total 100 %}%" aria-valuenow="{% widthratio score total 100 %}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <p class="h6 mb-3">
+                            {% widthratio score total 100 as percentage %}
+                            {% if percentage >= 80 %}
+                                <span class="badge bg-success">Відмінно! 🎉</span>
+                            {% elif percentage >= 60 %}
+                                <span class="badge bg-info">Добре! 👍</span>
+                            {% else %}
+                                <span class="badge bg-warning">Спробуйте ще! 💪</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="d-flex gap-2 flex-wrap justify-content-center">
+                        <a href="{% url 'quiz:home' %}" class="btn btn-primary">На головну</a>
+                        <a href="{% url 'quiz:home' %}" class="btn btn-outline-primary">Ще одна вікторина</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

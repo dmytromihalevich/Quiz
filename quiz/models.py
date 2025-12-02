@@ -43,6 +43,7 @@ class QuizSession(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     host = models.ForeignKey(User, on_delete=models.CASCADE)
     code = models.IntegerField(unique=True, blank=True)
+    started = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     finished = models.BooleanField(default=False)
 

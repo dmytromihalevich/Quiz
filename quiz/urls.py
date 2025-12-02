@@ -9,6 +9,9 @@ urlpatterns = [
     path('edit/<int:quiz_id>/', views.edit_quiz, name='edit_quiz'),
     path('join/<int:quiz_id>/', views.join_quiz, name='join_quiz'),
     path('session/<int:session_id>/', views.quiz_session_detail, name='quiz_session_detail'),
+    path('session/<int:session_id>/start/', views.start_session, name='start_session'),
+    path('session/<int:session_id>/results/', views.quiz_session_results, name='quiz_session_results'),
+    path('session/<int:session_id>/status/', views.session_status, name='session_status'),
     path('play/<int:member_id>/', views.play_quiz, name='play_quiz'),
 
     path('login/', views.login_view, name='login'),

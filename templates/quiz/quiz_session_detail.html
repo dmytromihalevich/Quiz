@@ -8,7 +8,7 @@
     <div class="card mb-3">
         <div class="card-body">
             <h4>Код для підключення</h4>
-            <p class="display-6">{{ session.code }}</p>
+            <p class="display-6">{{ session.code }} <button id="copy-session-code" class="btn btn-sm btn-outline-primary">Копіювати код</button></p>
             <p class="text-muted">Поділіться цим кодом з гравцями щоб вони приєдналися.</p>
         </div>
     </div>
@@ -24,12 +24,23 @@
 
     {% if is_host %}
         <div class="mb-3">
-            {% if members|length > 0 %}
-                <a href="{% url 'quiz:play_quiz' member_id=members.0.id %}" class="btn btn-success">Почати вікторину</a>
-            {% else %}
-                <button class="btn btn-secondary" disabled>Почати вікторину (очікування учасників)</button>
-            {% endif %}
+            <form method="post" action="{% url 'quiz:start_session' session_id=session.id %}">
+                {% csrf_token %}
+                {% if not session.started %}
+                    <button type="submit" class="btn btn-success">Запустити сесію</button>
+                {% else %}
+                    <a href="{% url 'quiz:quiz_session_results' session_id=session.id %}" class="btn btn-primary">Переглянути результати</a>
+                {% endif %}
+            </form>
         </div>
+    {% endif %}
+
+    {% if not is_host and current_member_id and session.started %}
+        <div class="mb-3">
+            <a href="{% url 'quiz:play_quiz' member_id=current_member_id %}" class="btn btn-success">Перейти до вікторини</a>
+        </div>
+    {% elif not is_host and not session.started %}
+        <div class="alert alert-info">Очікування запуску сесії від ведучого...</div>
     {% endif %}
 
     <a href="{% url 'quiz:home' %}" class="btn btn-outline-secondary">Повернутися додому</a>
@@ -48,5 +59,33 @@
         });
     });
     </script>
+
+    {% if not is_host and current_member_id and not session.started %}
+    <script>
+    // Poll session status and auto-redirect players when session.started becomes true
+    (function() {
+        const sessionId = {{ session.id }};
+        const memberId = {{ current_member_id }};
+        const checkUrl = "{% url 'quiz:session_status' session_id=session.id %}";
+        const redirectUrl = "{% url 'quiz:play_quiz' member_id=0 %}".replace('/0/', '/' + memberId + '/');
+
+        let poll = setInterval(async function() {
+            try {
+                const resp = await fetch(checkUrl, {cache: 'no-store'});
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (data.started) {
+                    clearInterval(poll);
+                    window.location.href = redirectUrl;
+                }
+            } catch (err) {
+                // ignore errors and try again
+                console.error('poll error', err);
+            }
+        }, 2000);
+    })();
+    </script>
+    {% endif %}
+
 </div>
 {% endblock %}
