@@ -17,6 +17,7 @@
         {% endfor %}
 
         <h4 class="mt-4 mb-3">Питання</h4>
+        {{ formset.non_form_errors }}
         {{ formset.management_form }}
 
         <div id="questions-container">
@@ -30,6 +31,7 @@
                     </div>
 
                     <div class="question-body">
+                        {{ q_form.non_field_errors }}
                     {% for field in q_form %}
                         <div class="mb-2">
                             {{ field.label_tag }}
@@ -118,13 +120,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const answersContainer = newQ.querySelector('.answers-container');
         if (answersContainer) {
-            // Remove any existing answer DOM blocks cloned from the template so new question starts empty
             answersContainer.querySelectorAll('.answer-block').forEach(el => el.remove());
 
-            // Set data-question-index for later lookup
             answersContainer.setAttribute('data-question-index', qIndex);
 
-            // Update management form inputs names/prefixes for this answers formset
             answersContainer.querySelectorAll('input, select, textarea').forEach(input => {
                 if (input.name && input.name.match(/^answers-\d+-/)) {
                     input.name = input.name.replace(/answers-\d+-/g, `answers-${qIndex}-`);
@@ -143,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function() {
         questionContainer.appendChild(newQ);
         totalQuestionFormsInput.value = qIndex + 1;
 
-        // Scroll to and highlight the newly added question for clarity
         newQ.scrollIntoView({ behavior: 'smooth', block: 'center' });
         newQ.classList.add('highlight');
         setTimeout(() => newQ.classList.remove('highlight'), 1200);
@@ -169,9 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Inject the question prefix into the empty form HTML, then replace the form index
         let emptyForm = templateEl.innerHTML;
-        // transform names like 'answers-__prefix__-field' -> 'answers-<qIndex>-__prefix__-field'
         emptyForm = emptyForm.replace(/answers-__prefix__-/g, `answers-${qIndex}-__prefix__-`);
         const newHtml = emptyForm.replace(/__prefix__/g, nextIndex);
 
@@ -181,7 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         answersContainer.appendChild(wrapper);
 
-        // Ensure inputs are correctly indexed for this question (safety against duplicated names)
         function renumberAnswers(container, qIdx) {
             const blocks = Array.from(container.querySelectorAll('.answer-block'));
             blocks.forEach((blk, i) => {
@@ -198,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
         renumberAnswers(answersContainer, qIndex);
     });
 
-    // Remove question handler (delegated)
     questionContainer.addEventListener('click', function(e){
         if (!e.target.classList.contains('remove-question-btn')) return;
         const btn = e.target;
@@ -209,7 +203,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!confirm('Видалити це питання?')) return;
 
         block.remove();
-        // renumber remaining questions and their inner inputs
         renumberQuestions();
     });
 
@@ -220,14 +213,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const header = blk.querySelector('.question-header h5');
             if (header) header.textContent = 'Питання ' + (i + 1);
 
-            // update attributes inside the block
             blk.querySelectorAll('[name], [id], [for]').forEach(el => {
                 if (el.name) el.name = el.name.replace(/questions-\d+-/g, `questions-${i}-`).replace(/answers-\d+-/g, `answers-${i}-`);
                 if (el.id) el.id = el.id.replace(/questions-\d+-/g, `questions-${i}-`).replace(/answers-\d+-/g, `answers-${i}-`);
                 if (el.getAttribute('for')) el.setAttribute('for', el.getAttribute('for').replace(/questions-\d+-/g, `questions-${i}-`).replace(/answers-\d+-/g, `answers-${i}-`));
             });
 
-            // ensure answers-container data attr updated
             const answersContainer = blk.querySelector('.answers-container');
             if (answersContainer) answersContainer.setAttribute('data-question-index', i);
             const addAnswerBtn = blk.querySelector('.add-answer-btn');

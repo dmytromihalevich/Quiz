@@ -46,7 +46,6 @@
     <a href="{% url 'quiz:home' %}" class="btn btn-outline-secondary">Повернутися додому</a>
 
     <script>
-    // copy code button behavior
     document.addEventListener('DOMContentLoaded', function() {
         const copyBtn = document.getElementById('copy-session-code');
         if (!copyBtn) return;
@@ -62,7 +61,6 @@
 
     {% if not is_host and current_member_id and not session.started %}
     <script>
-    // Poll session status and auto-redirect players when session.started becomes true
     (function() {
         const sessionId = {{ session.id }};
         const memberId = {{ current_member_id }};
@@ -79,7 +77,6 @@
                     window.location.href = redirectUrl;
                 }
             } catch (err) {
-                // ignore errors and try again
                 console.error('poll error', err);
             }
         }, 2000);

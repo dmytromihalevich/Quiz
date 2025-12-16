@@ -13,8 +13,21 @@
 
             <!-- Progress bar -->
             <div class="progress mb-4" style="height: 8px; border-radius: 10px;">
-                <div class="progress-bar" role="progressbar" style="width: {{ progress }}%" aria-valuenow="{{ current_question }}" aria-valuemin="0" aria-valuemax="{{ total_questions }}"></div>
+                <div class="progress-bar" role="progressbar" style="width: {{ progress }}%;" aria-valuenow="{{ current_question }}" aria-valuemin="0" aria-valuemax="{{ total_questions }}"></div>
             </div>
+
+            <!-- Timer line -->
+            {% if question.time_limit and question.time_limit > 0 %}
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <small class="text-muted">Час на питання:</small>
+                    <small class="text-muted">Залишилося: <strong id="time-remaining">{{ question.time_limit }}</strong>s</small>
+                </div>
+                <div class="timer-line" role="progressbar" aria-valuemin="0" aria-valuemax="{{ question.time_limit }}" aria-valuenow="{{ question.time_limit }}" data-time-limit="{{ question.time_limit }}">
+                    <div class="timer-fill" style="width:100%"></div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Question card -->
             <div class="card mb-4">
@@ -22,6 +35,18 @@
                     <div class="mb-3">
                         <span class="badge bg-info">Питання {{ current_question }} з {{ total_questions }}</span>
                     </div>
+                    {% if question.question_type == 'image' and question.image %}
+                        <img src="{{ question.image.url }}" alt="Question image" class="img-fluid rounded mb-3" />
+                    {% elif question.question_type == 'image' and question.image_url %}
+                        <img src="{{ question.image_url }}" alt="Question image" class="img-fluid rounded mb-3" />
+                    {% elif question.question_type == 'image' %}
+                        <div class="alert alert-warning mb-3">Зображення для цього питання не додано.</div>
+                    {% elif question.question_type == 'video' and question.video_url %}
+                        <div class="ratio ratio-16x9 mb-3">
+                            <iframe src="{{ question.video_url }}" title="question video" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                    {% endif %}
+
                     <h2 class="card-title h5 mb-4">{{ question.text }}</h2>
 
                     <form method="post" class="answer-form">
@@ -74,6 +99,67 @@
         background: rgba(103,176,255,0.04);
         border-color: rgba(103,176,255,0.12);
     }
+
+    /* Timer styles */
+    .timer-line{
+        height: 8px;
+        background: rgba(0,0,0,0.06);
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .timer-fill{
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg,#2a9df4,#4aa0ff);
+        transition: width 1s linear;
+    }
+
+    [data-theme="dark"] .timer-line{ background: rgba(255,255,255,0.03); }
+    [data-theme="dark"] .timer-fill{ background: linear-gradient(90deg,#67b0ff,#8fc9ff); }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const timerEl = document.querySelector('.timer-line');
+    const form = document.querySelector('.answer-form');
+    if(!timerEl || !form) return;
+
+    const total = parseInt(timerEl.dataset.timeLimit, 10);
+    if(isNaN(total) || total <= 0) return;
+
+    const fill = timerEl.querySelector('.timer-fill');
+    const remainingEl = document.getElementById('time-remaining');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    let remaining = total;
+    let stopped = false;
+
+    function tick(){
+        remaining -= 1;
+        if(remaining < 0) remaining = 0;
+        if(remainingEl) remainingEl.textContent = remaining;
+        if(fill) fill.style.width = (remaining/total*100) + '%';
+        timerEl.setAttribute('aria-valuenow', remaining);
+
+        if(remaining === 0){
+            clearInterval(intervalId);
+            // indicate time out and auto-submit
+            stopped = true;
+            if(submitBtn) submitBtn.disabled = true;
+            const inp = document.createElement('input'); inp.type = 'hidden'; inp.name='timed_out'; inp.value='1';
+            form.appendChild(inp);
+            form.submit();
+        }
+    }
+
+    const intervalId = setInterval(tick, 1000);
+
+    // stop timer when user submits manually
+    form.addEventListener('submit', function(){
+        if(!stopped) clearInterval(intervalId);
+    });
+});
+</script>
 {% endblock %}
 

@@ -9,13 +9,18 @@
 <form method="post">
     {% csrf_token %}
     {% for question in quiz.questions.all %}
-        <div>
-            <p>{{ question.text }}</p>
+        <div class="card mb-3 p-3">
+            {% if question.question_type == 'image' and question.image %}
+                <img src="{{ question.image.url }}" class="img-fluid mb-3 rounded" alt="Question image">
+            {% elif question.question_type == 'image' and question.image_url %}
+                <img src="{{ question.image_url }}" class="img-fluid mb-3 rounded" alt="Question image">
+            {% endif %}
+            <p class="mb-2">{{ question.text }}</p>
             {% for choice in question.choices.all %}
-                <label>
-                    <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}">
-                    {{ choice.text }}
-                </label><br>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" value="{{ choice.id }}" id="choice{{ choice.id }}">
+                    <label class="form-check-label" for="choice{{ choice.id }}">{{ choice.text }}</label>
+                </div>
             {% endfor %}
         </div>
     {% endfor %}

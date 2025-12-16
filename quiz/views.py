@@ -36,53 +36,43 @@ def edit_quiz(request, quiz_id):
     """
     quiz = get_object_or_404(Quiz, id=quiz_id, created_by=request.user)
 
-    # use explicit prefix for question formset so template + JS can target it
     QUESTION_PREFIX = 'questions'
 
     if request.method == 'POST':
         form = QuizForm(request.POST, instance=quiz)
         q_formset = QuestionFormSet(request.POST, request.FILES, instance=quiz, prefix=QUESTION_PREFIX)
 
-        # Build answer formsets (bound) for validation/rendering — prefix per question index
         answer_formsets = []
         for idx, q_form in enumerate(q_formset.forms):
             prefix = f'answers-{idx}'
-            # bind answers to the question instance (may not yet be saved)
             a_fs = AnswerFormSet(request.POST, request.FILES, instance=q_form.instance, prefix=prefix)
             answer_formsets.append(a_fs)
 
-        # attach answer formsets to question forms so template can render errors and management_form
         for qf, afs in zip(q_formset.forms, answer_formsets):
             qf.answers = afs
 
-        # validate all
         all_answers_valid = all(a.is_valid() for a in answer_formsets)
         if form.is_valid() and q_formset.is_valid() and all_answers_valid:
-            # save quiz and questions
             form.save()
             q_formset.save()
 
-            # After questions saved, re-bind answer formsets to the saved question instances and save them
             for idx, qf in enumerate(q_formset.forms):
-                question_instance = qf.instance  # should now have pk
+                question_instance = qf.instance  
                 prefix = f'answers-{idx}'
                 a_fs = AnswerFormSet(request.POST, request.FILES, instance=question_instance, prefix=prefix)
                 if a_fs.is_valid():
                     a_fs.save()
 
             return redirect('quiz:home')
-        # if invalid -> fall through to render with error messages (q_formset forms already contain errors)
 
     else:
         form = QuizForm(instance=quiz)
         q_formset = QuestionFormSet(instance=quiz, prefix=QUESTION_PREFIX)
-        # create answer formsets for existing question forms
         answer_formsets = []
         for idx, q_form in enumerate(q_formset.forms):
             prefix = f'answers-{idx}'
             a_fs = AnswerFormSet(instance=q_form.instance, prefix=prefix)
             answer_formsets.append(a_fs)
-            # attach for template
             q_form.answers = a_fs
 
     return render(request, 'quiz/edit_quiz.html', {
@@ -100,29 +90,22 @@ def create_quiz_session(request, quiz_id):
 
 def join_quiz(request, quiz_id=None):
     quiz = get_object_or_404(Quiz, id=quiz_id)
-    # New behavior: user can choose role 'host' or 'player'.
-    # - Host: must be authenticated; creates a new QuizSession and becomes a member.
-    # - Player: must provide a session `code` (or will join an existing open session) and a nickname (if anonymous).
-
     if request.method == "POST":
         form = JoinQuizForm(request.POST)
         if not form.is_valid():
             return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
         role = form.cleaned_data.get('role')
-        # Host flow
         if role == 'host':
             if not request.user.is_authenticated:
                 messages.error(request, "Ви повинні увійти в систему, щоб створити сесію як ведучий.")
                 return redirect('quiz:login')
 
-            # create a new session (always create a fresh one for this host)
             session = QuizSession.objects.create(quiz=quiz, host=request.user)
             member = QuizMember.objects.create(quiz_session=session, nickname=request.user.username)
             messages.success(request, f"Сесію створено. Код сесії: {session.code}")
             return redirect('quiz:quiz_session_detail', session_id=session.id)
 
-        # Player flow: validate code and nickname if needed
         code = form.cleaned_data.get('code')
         if not code:
             form.add_error('code', 'Введіть код сесії')
@@ -143,14 +126,10 @@ def join_quiz(request, quiz_id=None):
             return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
         member = QuizMember.objects.create(quiz_session=session, nickname=nickname)
-        # remember this member id in the user's session so lobby can show an "Enter quiz" button
-        request.session[f'member_{session.id}'] = member.id
-        # If session already started, send player straight to the quiz; otherwise send to lobby
         if session.started:
             return redirect('quiz:play_quiz', member_id=member.id)
         return redirect('quiz:quiz_session_detail', session_id=session.id)
 
-    # GET
     form = JoinQuizForm()
     return render(request, 'quiz/join_quiz.html', {'form': form, 'quiz': quiz})
 
@@ -162,11 +141,9 @@ def quiz_session_detail(request, session_id):
     """
     session = get_object_or_404(QuizSession, id=session_id)
 
-    # Basic access: allow host and any member of the session to view. Hosts get extra controls.
     is_host = request.user == session.host
     members = QuizMember.objects.filter(quiz_session=session)
 
-    # find this user's member id for this session (if any)
     member_session_key = f'member_{session.id}'
     current_member_id = request.session.get(member_session_key)
 
@@ -191,7 +168,6 @@ def start_session(request, session_id):
         messages.error(request, 'Тільки ведучий може запускати сесію.')
         return redirect('quiz:quiz_session_detail', session_id=session.id)
 
-    # mark started
     session.started = True
     session.save()
     messages.success(request, 'Сесію запущено. Гравці можуть почати гру.')
@@ -206,7 +182,6 @@ def quiz_session_results(request, session_id):
         return redirect('quiz:quiz_session_detail', session_id=session.id)
 
     members = QuizMember.objects.filter(quiz_session=session)
-    # compute scores per member
     results = []
     for m in members:
         correct_count = QuizResults.objects.filter(quiz_member=m, answer__is_correct=True).count()
@@ -251,7 +226,17 @@ def play_quiz(request, member_id):
         request.session['current_index'] += 1
         return redirect('quiz:play_quiz', member_id=member.id)
 
-    return render(request, 'quiz/play_quiz.html', {'question': question, 'member': member})
+    total_questions = len(questions)
+    current_question_num = current_index + 1
+    progress = int((current_index / total_questions) * 100) if total_questions > 0 else 0
+
+    return render(request, 'quiz/play_quiz.html', {
+        'question': question,
+        'member': member,
+        'current_question': current_question_num,
+        'total_questions': total_questions,
+        'progress': progress,
+    })
 
 
 def register_view(request):

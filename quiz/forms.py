@@ -43,18 +43,34 @@ class QuizForm(forms.ModelForm):
             field.widget.attrs['class'] = 'form-control'
 
 
+class QuestionForm(forms.ModelForm):
+    class Meta:
+        model = Question
+        fields = ['text', 'question_type', 'image', 'image_url', 'video_url', 'time_limit']
+        widgets = {
+            'text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Текст запитання'}),
+            'question_type': forms.Select(attrs={'class': 'form-select'}),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Посилання на зображення'}),
+            'video_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'URL відео'}),
+            'time_limit': forms.NumberInput(attrs={'class': 'form-control', 'min': 5, 'placeholder': 'Час на відповідь'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        qtype = cleaned.get('question_type')
+        image = cleaned.get('image')
+        image_url = cleaned.get('image_url')
+        if qtype == Question.IMAGE and not image and not image_url:
+            raise forms.ValidationError('Для питань з типом "Зображення" потрібно завантажити зображення або вказати посилання на нього.')
+        return cleaned
+
+
 QuestionFormSet = inlineformset_factory(
     Quiz,
     Question,
-    fields=['text', 'question_type', 'image', 'video_url', 'time_limit'],
+    form=QuestionForm,
     extra=1,
-    widgets={
-        'text': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Текст запитання'}),
-        'question_type': forms.Select(attrs={'class': 'form-select'}),
-        'image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-        'video_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'URL відео'}),
-        'time_limit': forms.NumberInput(attrs={'class': 'form-control', 'min': 5, 'placeholder': 'Час на відповідь'}),
-    }
 )
 
 class RegisterForm(UserCreationForm):

@@ -1,5 +1,4 @@
 :root{
-  /* Light theme defaults (used when data-theme is not 'dark') */
   --bg: linear-gradient(180deg,#f8fafc 0%, #ffffff 100%);
   --bg-solid: #f8fafc;
   --text: #212529;
@@ -15,7 +14,6 @@
   --glow: rgba(13,110,253,0.06);
 }
 
-/* Explicit light-theme overrides (keeps intent clear) */
 [data-theme="light"]{
   --bg: linear-gradient(180deg,#f8fafc 0%, #ffffff 100%);
   --bg-solid: #f8fafc;
@@ -92,7 +90,6 @@ a { color: var(--link) !important; }
   padding: .42rem .9rem;
 }
 
-/* small helper for the theme toggle */
 .theme-toggle-btn{
   border: none;
   background: transparent;
@@ -100,7 +97,6 @@ a { color: var(--link) !important; }
   font-size: 18px; padding: 6px 8px; border-radius: 6px;
 }
 
-/* Improve list-group item contrast in dark mode */
 
 .list-group-item{
   background-color: rgba(255,255,255,0.02) !important;
@@ -111,7 +107,6 @@ a { color: var(--link) !important; }
 
 .list-group-item:hover{ background-color: rgba(103,176,255,0.04) !important; transform: translateY(-2px); }
 
-/* Question card styles for create/edit views */
 .question-block{
   background: var(--card-bg) !important;
   border: 1px solid rgba(0,0,0,0.06);
@@ -125,7 +120,6 @@ a { color: var(--link) !important; }
 .question-block .question-footer{ padding-top: 0.5rem; }
 
 .question-block .answer-block{
-  /* Use theme-aware card background and accent so dark mode isn't blown out */
   background: var(--card-bg) !important;
   color: var(--text) !important;
   border: 1px solid var(--card-accent) !important;
@@ -140,24 +134,19 @@ a { color: var(--link) !important; }
   border-color: rgba(42,157,244,0.18);
 }
 
-/* small responsive nicety */
 @media (max-width: 576px){
   .question-block{ padding: .75rem; }
   .navbar::after{ left: 6px; right: 6px; }
 }
 
-/* headings clearer */
 h1,h2,h3,h4,h5,h6{ color: var(--text) !important; }
 
 .container { max-width: 1100px; }
 
-/* subtle accent underline for links on hover */
 a:hover{ text-decoration: none; box-shadow: 0 6px 18px rgba(103,176,255,0.06); }
 
-/* navbar translucent and blurred */
 .navbar{ background: var(--navbar-bg) !important; backdrop-filter: blur(6px); }
 
-/* Header / navbar polish (accent bar, stronger brand, nicer toggle) */
 .navbar{
   position: relative;
   padding-top: 0.6rem;
@@ -200,11 +189,9 @@ a:hover{ text-decoration: none; box-shadow: 0 6px 18px rgba(103,176,255,0.06); }
   opacity: 0.95;
 }
 
-/* Make the navbar toggler and icons match theme */
 .navbar .navbar-toggler { border: none; }
 .navbar .navbar-toggler-icon{ filter: none; opacity: 0.95; }
 
-/* Slightly elevate the header in light theme */
 [data-theme="light"] .navbar{
   box-shadow: 0 8px 24px rgba(13,110,253,0.04);
 }
@@ -214,7 +201,6 @@ a:hover{ text-decoration: none; box-shadow: 0 6px 18px rgba(103,176,255,0.06); }
   opacity: 0.6;
 }
 
-/* Light-theme visual polish */
 [data-theme="light"] .navbar{
   background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(245,249,255,0.95)) !important;
   border-bottom: 1px solid rgba(13,110,253,0.04);
@@ -264,7 +250,6 @@ a:hover{ text-decoration: none; box-shadow: 0 6px 18px rgba(103,176,255,0.06); }
   background: rgba(42,157,244,0.02) !important;
 }
 
-/* Ensure elements that might use default dark text are readable in dark theme */
 [data-theme="dark"] {
   color: var(--text) !important;
 }
@@ -289,14 +274,12 @@ a:hover{ text-decoration: none; box-shadow: 0 6px 18px rgba(103,176,255,0.06); }
   color: var(--muted) !important;
 }
 
-/* Modern form-control styles (both themes) */
 .form-control{
   border-radius: calc(var(--radius) - 4px);
   padding: .56rem .66rem;
   transition: box-shadow .12s ease, border-color .12s ease, transform .08s ease;
 }
 
-/* Accessible focus ring */
 :focus-visible{ outline: none; box-shadow: 0 0 0 4px rgba(13,110,253,0.12); border-color: var(--link); }
 
 [data-theme="dark"] .btn,
@@ -316,13 +299,10 @@ a:hover{ text-decoration: none; box-shadow: 0 6px 18px rgba(103,176,255,0.06); }
   color: var(--text) !important;
 }
 
-/* Improve table row contrast */
 table.table tbody tr td{ background: transparent; }
 
-/* modern table row hover */
 table.table tbody tr:hover{ background: rgba(13,110,253,0.03); }
 
-/* Dark-mode table overrides to avoid white header / black text */
 [data-theme="dark"] table.table{
   color: var(--text) !important;
 }
@@ -345,13 +325,11 @@ table.table tbody tr:hover{ background: rgba(13,110,253,0.03); }
   vertical-align: middle;
 }
 
-/* Ensure outline secondary button visible on dark background */
 .btn-outline-secondary{
   color: var(--text) !important;
   border-color: rgba(255,255,255,0.06) !important;
 }
 
-/* Progress bar theming */
 .progress{
   background-color: rgba(0,0,0,0.04);
   border-radius: var(--radius);
@@ -366,7 +344,9 @@ table.table tbody tr:hover{ background: rgba(13,110,253,0.03); }
   box-shadow: 0 2px 8px rgba(74,160,255,0.16);
 }
 
-/* Badge styling */
+.timer-line{ height: 8px; border-radius: 8px; overflow: hidden; }
+.timer-fill{ height: 100%; transition: width 1s linear; }
+
 .badge{
   padding: .4rem .7rem;
   border-radius: 6px;
@@ -375,14 +355,12 @@ table.table tbody tr:hover{ background: rgba(13,110,253,0.03); }
   letter-spacing: .3px;
 }
 
-/* Display text for results */
 .display-1{
   font-size: 3.5rem;
   line-height: 1;
   letter-spacing: -1px;
 }
 
-/* Better button styling for secondary */
 .btn-outline-secondary:hover{
   transform: translateY(-2px);
   background-color: rgba(255,255,255,0.95);
